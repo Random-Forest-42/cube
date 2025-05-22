@@ -10,6 +10,7 @@ base_url = "https://www.worldcubeassociation.org/competitions/URJCOpen2025/regis
 base_url = "https://www.worldcubeassociation.org/competitions/GetafeOpen2025/registrations"
 
 input_file = 'getafe_2025_4.html'
+input_file = 'xmadrid_20250522_2.html'
 # response = requests.get(base_url) # requiere auth???
 with open(input_file, "r", encoding="utf-8") as f:
     html_content = f.read()
@@ -30,7 +31,26 @@ for person in hrefs:
         soup = BeautifulSoup(person_reponse.text, 'html.parser')
         single_value = soup.find('a', {"class": "plain"}, href="/results/rankings/333/single").text.strip()
         average_value = soup.find('a', {"class": "plain"}, href="/results/rankings/333/average").text.strip()
-        data.append([person.split("/")[-1], single_value, average_value])
+
+
+        # find the value country-ranktarget_tr = None
+        for tr in soup.find_all("tr"):
+            event_td = tr.find("td", class_="event")
+            if event_td and event_td.get("data-event") == "333":
+                target_tr = tr
+                break
+
+        # Encuentra todos los td con clase "country-rank"
+        country_ranks = target_tr.find_all("td", class_="country-rank")
+        # El segundo es el del average
+        if len(country_ranks) >= 2:
+            country_single_rank = country_ranks[1].text.strip()
+            country_average_rank = country_ranks[1].text.strip()
+        else:
+            country_single_rank = 0
+            country_average_rank = 0
+
+        data.append([person.split("/")[-1], single_value, average_value, country_single_rank, country_average_rank])
     except Exception as e:
         print(f"ERROR con person: {person}")
 
@@ -56,12 +76,12 @@ def mm_ss_to_s(o):
 
 new_data = []
 for d in data:
-    new_data.append([d[0], mm_ss_to_s(d[1]), mm_ss_to_s(d[2])])
+    new_data.append([d[0], mm_ss_to_s(d[1]), mm_ss_to_s(d[2]), d[3], d[4]])
 
 
 import pandas as pd
 df = pd.DataFrame(new_data)
-df.columns = ["person", "single", "average"]
+df.columns = ["person", "single", "average", "single_rank", "average_rank"]
 
 output_file = f'{input_file.replace(".", "_")}.csv'
 df.to_csv(output_file)
