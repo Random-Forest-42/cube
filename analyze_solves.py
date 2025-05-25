@@ -34,7 +34,9 @@ df = df[(df["dnf"] == False) & (df["time"] <= MAX_TIME)].copy()
 
 # take only last X rows
 last_rows = 1000
-df = df.iloc[-last_rows:]
+last_rows = None
+if last_rows:
+    df = df.iloc[-last_rows:]
 
 numbers = [5, 12, 50, 100, 250, 500]
 
@@ -206,9 +208,42 @@ def plot_ao(df, ao_column, step=0, col2=None):
     plt.tight_layout()
     plt.show()
 
+def plot_columns(df, columns, step=0):
+    """
+    Plotea la evolución de varias columnas en el DataFrame dado.
+    """
+    if step == 0:
+        step = len(df) // 200  # muestreo por defecto
+    plt.figure(figsize=(12, 6))
+    for col in columns:
+        plt.plot(
+            df.index[::step],
+            df[col][::step],
+            marker='o',
+            linestyle='-',
+            label=col
+        )
+    plt.title(f"Evolución de las columnas (muestreo cada {step})")
+    plt.xlabel("Número de resolución")
+    plt.ylabel("Tiempo (ms)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 plot_ao(df, 'time_ao250', step=10)
 plot_ao(df, 'inspection_time_ao250', step=10, col2='total_execution_time_ao250')
 plot_ao(df, 'pct_inspection_ao250')
 plot_ao(df, 'f2l_1_pensar_ao250')
 plot_ao(df, 'total_oll_ao250')
 plot_ao(df, 'total_pll_ao250')
+
+plot_columns(df, [
+    "total_f2l_1_ao500",
+    "total_f2l_2_ao500",
+    "total_f2l_3_ao500",
+    "total_f2l_4_ao500",
+    "total_oll_ao500",
+    "total_pll_ao500",
+])
