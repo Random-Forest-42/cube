@@ -1,0 +1,1 @@
+utilizar las queries en https://statistics.worldcubeassociation.org/database-query
