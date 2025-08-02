@@ -245,20 +245,26 @@ from
     (
         select
             case
-                when best >= 900 and best < 1000 then '00:9s-10s'
-                when best >= 1000 and best < 1100 then '01:10s-11s'
-                when best >= 1100 and best < 1200 then '02:11s-12s'
-                when best >= 1200 and best < 1300 then '03:12s-13s'
-                when best >= 1300 and best < 1400 then '04:13s-14s'
-                when best >= 1400 and best < 1500 then '05:14s-15s'
-                when best >= 1500 and best < 1600 then '06:15s-16s'
-                when best >= 1600 and best < 1700 then '07:16s-17s'
-                when best >= 1700 and best < 1800 then '08:17s-18s'
-                when best >= 1800 and best < 1900 then '09:18s-19s'
-                when best >= 1900 and best < 2000 then '10:19s-20s'
-                when best >= 2000 and best < 2100 then '11:20s-21s'
-                when best >= 2100 and best < 2200 then '12:21s-22s'
-                else '2200+'
+                when best >= 500 and best < 600 then '01:5s-6s'
+                when best >= 600 and best < 700 then '02:6s-7s'
+                when best >= 700 and best < 800 then '03:7s-8s'
+                when best >= 800 and best < 900 then '04:8s-9s'
+                when best >= 900 and best < 1000 then '05:9s-10s'
+                when best >= 1000 and best < 1100 then '06:10s-11s'
+                when best >= 1100 and best < 1200 then '07:11s-12s'
+                when best >= 1200 and best < 1300 then '08:12s-13s'
+                when best >= 1300 and best < 1400 then '09:13s-14s'
+                when best >= 1400 and best < 1500 then '10:14s-15s'
+                when best >= 1500 and best < 1600 then '11:15s-16s'
+                when best >= 1600 and best < 1700 then '12:16s-17s'
+                when best >= 1700 and best < 1800 then '13:17s-18s'
+                when best >= 1800 and best < 1900 then '14:18s-19s'
+                when best >= 1900 and best < 2000 then '15:19s-20s'
+                when best >= 2000 and best < 2100 then '16:20s-21s'
+                when best >= 2100 and best < 2200 then '17:21s-22s'
+                when best >= 2200 and best < 2300 then '18:22s-23s'
+                when best >= 2300 and best < 2400 then '19:23s-24s'
+                else '2400+'
             end as time_range
             , world_rank
             , person_id as wca_id
@@ -267,7 +273,7 @@ from
             ranks_average
         where
             event_id = '333'
-            and best >= 900 and best < 2200
+            and best >= 500 and best < 2400
     ) as ranks_33
     inner join
     (
@@ -279,7 +285,7 @@ from
         from
             ranks_average
         where
-            event_id in ('clock', '444', 'sq1', '222')
+            event_id in ('clock', '444', 'sq1', '222', '555')
     ) ranks_other_event
     on
         ranks_33.wca_id = ranks_other_event.wca_id

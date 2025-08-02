@@ -19,19 +19,43 @@ def read_csv_file(file_path):
         print(f"Error reading {file_path}: {e}")
         return None
 
+# read all files from a directory and return only one dataframe with all data
+def read_csv_files_from_directory(directory):
+    """
+    Reads all CSV files from a directory and concatenates them into a single DataFrame.
+    """
+    all_data = []
+    for filename in os.listdir(directory):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(directory, filename)
+            df = read_csv_file(file_path)
+            if df is not None:
+                all_data.append(df)
+    if all_data:
+        return pd.concat(all_data, ignore_index=True)
+    else:
+        return pd.DataFrame()
 # df_test = read_csv_file(os.path.join(os.getcwd(), "Rubik", "inputs", "solve_lite.csv"))
-df_test = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solve_lite.csv')
-df = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solves 2025-04-01 2025-05-16.csv')
-df = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solves full hasta 2025-05-16.csv')
+# df_test = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solve_lite.csv')
+# df = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solves full hasta 2025-07-29.csv')
+df_1 = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum\\solves 2025-08-03.csv')
+df_2 = read_csv_files_from_directory('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum')
+df = df_2.copy()
 
 # Parámetro de tiempo máximo permitido (en milisegundos)
-MAX_TIME = 30000  # 30 segundos
+MAX_TIME = 25000  # 30 segundos
 trim_percent = 0.05  # 5% de recorte
 
 # Filtrar el DataFrame original
 df_original = df.copy()
 df = df[(df["dnf"] == False) & (df["time"] <= MAX_TIME)].copy()
+len(df)
+# tomar solo una de las sesiones, campo "session_name"
+session_name = 'gan12'
+if session_name:
+    df = df[df["session_name"] == session_name]
 
+len(df)
 # take only last X rows
 last_rows = 1000
 last_rows = None
@@ -163,8 +187,8 @@ for time_column in time_columns:
 
 new_columns = {}
 for n in numbers:
-    new_columns[f'inspection_time_ao{n}'] = df[f"time_ao{n}"] - df[f"total_execution_time_ao{n}"]
-    new_columns[f'pct_inspection_ao{n}'] = df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"]
+    new_columns[f'pensar_ao{n}'] = df[f"time_ao{n}"] - df[f"total_execution_time_ao{n}"]
+    new_columns[f'pct_pensar_ao{n}'] = df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"]
     new_columns[f'total_f2l_1_ao{n}'] = df[f'f2l_1_pensar_ao{n}'] + df[f'f2l_1_ex_ao{n}']
     new_columns[f'total_f2l_2_ao{n}'] = df[f'f2l_2_pensar_ao{n}'] + df[f'f2l_2_ex_ao{n}']
     new_columns[f'total_f2l_3_ao{n}'] = df[f'f2l_3_pensar_ao{n}'] + df[f'f2l_3_ex_ao{n}']
@@ -247,3 +271,206 @@ plot_columns(df, [
     "total_oll_ao500",
     "total_pll_ao500",
 ])
+
+# quiero saber el % de solves sub X segundos, para X de 10 a 20
+def percentage_below_threshold(df, column, threshold):
+    """
+    Calcula el porcentaje de valores en una columna que están por debajo de un umbral dado.
+    """
+    count_below = df[df[column] < threshold*1000].shape[0]
+    total_count = df.shape[0]
+    return round((count_below / total_count) * 100, 2) if total_count > 0 else 0
+
+# Calcular el porcentaje de solves por debajo de diferentes thresholds
+thresholds = range(10, 21)  # de 10 a 20 segundos
+percentages = {}
+for threshold in thresholds:
+    percentages[threshold] = percentage_below_threshold(df, 'time', threshold)
+# Imprimir los resultados
+print("Porcentaje de solves por debajo de diferentes thresholds:")
+for threshold, percentage in percentages.items():
+    print(f"{threshold} segundos: {percentage:.2f}%")
+
+# repetir la operacion dividiendo df de 1000 en 1000
+def percentage_below_threshold_divided(df, column, threshold, chunk_size=1000):
+    """
+    Calcula el porcentaje de valores en una columna que están por debajo de un umbral dado,
+    dividiendo el DataFrame en chunks de tamaño `chunk_size`.
+    """
+    percentages = []
+    for start in range(0, len(df), chunk_size):
+        chunk = df.iloc[start:start + chunk_size]
+        count_below = chunk[chunk[column] < threshold * 1000].shape[0]
+        total_count = chunk.shape[0]
+        percentages.append(round((count_below / total_count) * 100, 2) if total_count > 0 else 0)
+    return percentages
+# Calcular el porcentaje de solves por debajo de diferentes thresholds en chunks de 1000
+chunk_percentages = {}
+for threshold in thresholds:
+    chunk_percentages[threshold] = percentage_below_threshold_divided(df, 'time', threshold)
+# Imprimir los resultados por chunks
+print("Porcentaje de solves por debajo de diferentes thresholds (dividido en chunks):")
+for threshold, percentage_list in chunk_percentages.items():
+    print(f"{threshold} segundos: {percentage_list}")
+
+# plot chunk_percentages de manera visual
+def plot_chunk_percentages(chunk_percentages, title="Porcentaje de solves por debajo de thresholds (chunks)"):
+    """
+    Plotea el porcentaje de solves por debajo de diferentes thresholds en chunks.
+    """
+    plt.figure(figsize=(10, 6))
+    for threshold, percentages in chunk_percentages.items():
+        plt.plot(percentages, marker='o', label=f"{threshold} segundos")
+    plt.title(title)
+    plt.xlabel("Chunk index")
+    plt.ylabel("Porcentaje (%)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+plot_chunk_percentages(chunk_percentages)
+
+
+# calcular una lista con el tiempo mejor cada 10 resolves
+def best_time_per_n_resolves(df, n=10):
+    """
+    Calcula el mejor tiempo cada n resolves.
+    """
+    best_times = []
+    for i in range(0, len(df), n):
+        chunk = df.iloc[i:i + n]
+        if not chunk.empty:
+            best_time = chunk['time'].min()
+            best_times.append(best_time)
+        else:
+            best_times.append(np.nan)
+    return best_times
+
+# Calcular los mejores tiempos cada 10 resolves
+best_times = best_time_per_n_resolves(df, n=5)
+# plot
+def plot_best_times(best_times, title="Mejor tiempo cada 10 resolves"):
+    """
+    Plotea los mejores tiempos cada n resolves.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.plot(best_times, marker='o', linestyle='-', color='green', label='Mejor tiempo')
+    plt.title(title)
+    plt.xlabel("Chunk de 10 resolves")
+    plt.ylabel("Tiempo (ms)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    # añadir linea de regresion
+    z = np.polyfit(range(len(best_times)), best_times, 1)
+    p = np.poly1d(z)
+
+    plt.show()
+
+# plot_best_times(best_times)
+# añadir linea de regresion al anterior plot
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+# Lista de números
+datos = best_times
+
+# Eje x como índices de los datos
+x = np.arange(len(datos)).reshape(-1, 1)
+y = np.array(datos)
+
+# Modelo de regresión lineal
+modelo = LinearRegression()
+modelo.fit(x, y)
+
+# Predicción de la recta
+y_pred = modelo.predict(x)
+
+# Plot
+plt.figure(figsize=(8, 5))
+plt.plot(x, y, label='Datos', marker='o')
+plt.plot(x, y_pred, label='Regresión lineal', color='red', linestyle='--')
+plt.xlabel('Índice')
+plt.ylabel('Valor')
+plt.title('Gráfico de líneas con regresión lineal')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+
+# Calcular los mejores tiempos cada 10 resolves
+best_times = best_time_per_n_resolves(df, n=40)
+datos = best_times
+
+# Eje x como índices de los datos
+x = np.arange(len(datos)).reshape(-1, 1)
+y = np.array(datos)
+
+# Modelo de regresión lineal
+modelo = LinearRegression()
+modelo.fit(x, y)
+
+# Predicción de la recta
+y_pred = modelo.predict(x)
+
+# Plot
+plt.figure(figsize=(8, 5))
+plt.plot(x, y, label='Datos', marker='o')
+plt.plot(x, y_pred, label='Regresión lineal', color='red', linestyle='--')
+plt.xlabel('Índice')
+plt.ylabel('Valor')
+plt.title('Gráfico de líneas con regresión lineal')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+#### Ratios optimos
+cross_ratio = 0.12
+cross_1_ratio = 0.245
+f2l_and_cross_ratio = 0.62
+f2l_ratio = f2l_and_cross_ratio - cross_ratio
+oll_ratio = 0.165
+pll_ratio = 0.215
+
+# last value of total_execution_time_ao500
+last_times = {
+    "total": df['time_ao500'].iloc[-1],
+    "cross": df['cross_ao500'].iloc[-1],
+    "cross_1": df['cross_ao500'].iloc[-1] + df['total_f2l_1_ao500'].iloc[-1],
+    "f2l": df['total_f2l_1_ao500'].iloc[-1] + df['total_f2l_2_ao500'].iloc[-1] + df['total_f2l_3_ao500'].iloc[-1] + df['total_f2l_4_ao500'].iloc[-1],
+    "oll": df['total_oll_ao500'].iloc[-1],
+    "pll": df['total_pll_ao500'].iloc[-1],
+}
+
+# print time de cada paso por el inverso de su ratio optimo
+for key, value in last_times.items():
+    if key == 'total':
+        continue  # no necesitamos el total para los ratios
+    optimal_ratio = locals()[f"{key}_ratio"]
+    print(f"{key}: {value / optimal_ratio:.3f} segundos (Óptimo: {optimal_ratio:.3f})")
+
+# Calcular los ratios
+ratios = {key: value / last_times['total'] for key, value in last_times.items()}
+del ratios['total']  # eliminar el ratio total, ya que no es necesario
+# comparar con los ratios optimos
+print("Ratios actuales:")
+for key, value in ratios.items():
+    print(f"{key}: {value:.3f} (Óptimo: {locals()[f'{key}_ratio']:.3f})")
+# Comparar con los ratios óptimos
+print("\nComparación con los ratios óptimos:")
+for key, value in ratios.items():
+    optimal_value = locals()[f"{key}_ratio"]
+    if value < optimal_value:
+        print(f"{key}: {value:.3f} (Mejor que óptimo: {optimal_value:.3f})")
+    elif value > optimal_value:
+        print(f"{key}: {value:.3f} (Peor que óptimo: {optimal_value:.3f})")
+    else:
+        print(f"{key}: {value:.3f} (Igual que óptimo: {optimal_value:.3f})")
+
