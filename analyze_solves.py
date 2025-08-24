@@ -257,8 +257,8 @@ def plot_columns(df, columns, step=0):
 
 
 plot_ao(df, 'time_ao250', step=10)
-plot_ao(df, 'inspection_time_ao250', step=10, col2='total_execution_time_ao250')
-plot_ao(df, 'pct_inspection_ao250')
+plot_ao(df, 'pensar_ao250', step=10, col2='total_execution_time_ao250')
+plot_ao(df, 'pct_pensar_ao250')
 plot_ao(df, 'f2l_1_pensar_ao250')
 plot_ao(df, 'total_oll_ao250')
 plot_ao(df, 'total_pll_ao250')
@@ -438,6 +438,7 @@ f2l_and_cross_ratio = 0.62
 f2l_ratio = f2l_and_cross_ratio - cross_ratio
 oll_ratio = 0.165
 pll_ratio = 0.215
+last_layer_plus_last_slot_ratio = oll_ratio + pll_ratio + (f2l_ratio / 4)
 
 # last value of total_execution_time_ao500
 last_times = {
@@ -447,6 +448,7 @@ last_times = {
     "f2l": df['total_f2l_1_ao500'].iloc[-1] + df['total_f2l_2_ao500'].iloc[-1] + df['total_f2l_3_ao500'].iloc[-1] + df['total_f2l_4_ao500'].iloc[-1],
     "oll": df['total_oll_ao500'].iloc[-1],
     "pll": df['total_pll_ao500'].iloc[-1],
+    "last_layer_plus_last_slot": df['total_oll_ao500'].iloc[-1] + df['total_pll_ao500'].iloc[-1] + df['total_f2l_4_ao500'].iloc[-1],
 }
 
 # print time de cada paso por el inverso de su ratio optimo
@@ -459,18 +461,17 @@ for key, value in last_times.items():
 # Calcular los ratios
 ratios = {key: value / last_times['total'] for key, value in last_times.items()}
 del ratios['total']  # eliminar el ratio total, ya que no es necesario
-# comparar con los ratios optimos
-print("Ratios actuales:")
-for key, value in ratios.items():
-    print(f"{key}: {value:.3f} (Óptimo: {locals()[f'{key}_ratio']:.3f})")
+
 # Comparar con los ratios óptimos
 print("\nComparación con los ratios óptimos:")
 for key, value in ratios.items():
-    optimal_value = locals()[f"{key}_ratio"]
-    if value < optimal_value:
-        print(f"{key}: {value:.3f} (Mejor que óptimo: {optimal_value:.3f})")
-    elif value > optimal_value:
-        print(f"{key}: {value:.3f} (Peor que óptimo: {optimal_value:.3f})")
-    else:
-        print(f"{key}: {value:.3f} (Igual que óptimo: {optimal_value:.3f})")
+    # optimal_value = locals()[f"{key}_ratio"]
+    optimal_value = locals().get(f"{key}_ratio")
+    if optimal_value:
+        if value < optimal_value:
+            print(f"{key}: {value:.3f} (Mejor que óptimo: {optimal_value:.3f})")
+        elif value > optimal_value:
+            print(f"{key}: {value:.3f} (Peor que óptimo: {optimal_value:.3f})")
+        else:
+            print(f"{key}: {value:.3f} (Igual que óptimo: {optimal_value:.3f})")
 
