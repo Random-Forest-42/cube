@@ -475,3 +475,13 @@ for key, value in ratios.items():
         else:
             print(f"{key}: {value:.3f} (Igual que óptimo: {optimal_value:.3f})")
 
+#### intentamos bajar el tiempo de pensar en f2l
+# plot f2l_pensar_ao500
+plot_columns(df, [
+    # "f2l_1_pensar_ao500",
+    "f2l_2_pensar_ao500",
+    "f2l_3_pensar_ao500",
+    "f2l_4_pensar_ao500",
+    "oll_pensar_ao500",
+    "pll_pensar_ao500",
+], step=10)
