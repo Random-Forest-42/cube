@@ -38,8 +38,9 @@ def read_csv_files_from_directory(directory):
 # df_test = read_csv_file(os.path.join(os.getcwd(), "Rubik", "inputs", "solve_lite.csv"))
 # df_test = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solve_lite.csv')
 # df = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solves full hasta 2025-07-29.csv')
-df_1 = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum\\solves 2025-08-03.csv')
-df_2 = read_csv_files_from_directory('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum')
+# df_1 = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum\\solves 2025-08-03.csv')
+# df = read_csv_file('D:\\Documentos\\Coding\\Python\\cube\\csv\\solve_lite_cleaned.csv')
+df_2 = read_csv_files_from_directory('D:\\Documentos\\Coding\\Python\\cube\\csv\\acum')
 df = df_2.copy()
 
 # Parámetro de tiempo máximo permitido (en milisegundos)
@@ -52,6 +53,7 @@ df = df[(df["dnf"] == False) & (df["time"] <= MAX_TIME)].copy()
 len(df)
 # tomar solo una de las sesiones, campo "session_name"
 session_name = 'gan12'
+session_name = 'slow solves'
 if session_name:
     df = df[df["session_name"] == session_name]
 
