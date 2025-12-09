@@ -3,23 +3,10 @@ Este script analiza los csvs generados en Cubeast
 plot de averages al final, con la tendencia
 puedes medir diferentes pasos
 '''
-
 import pandas as pd
 import os
 import numpy as np
 
-def read_csv_file(file_path):
-    """
-    Reads a CSV file and returns its content as a DataFrame.
-    """
-    try:
-        df = pd.read_csv(file_path)
-        return df
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-        return None
-
-# read all files from a directory and return only one dataframe with all data
 def read_csv_files_from_directory(directory):
     """
     Reads all CSV files from a directory and concatenates them into a single DataFrame.
@@ -28,23 +15,19 @@ def read_csv_files_from_directory(directory):
     for filename in os.listdir(directory):
         if filename.endswith('.csv'):
             file_path = os.path.join(directory, filename)
-            df = read_csv_file(file_path)
+            df = pd.read_csv(file_path)
             if df is not None:
                 all_data.append(df)
     if all_data:
         return pd.concat(all_data, ignore_index=True)
     else:
         return pd.DataFrame()
-# df_test = read_csv_file(os.path.join(os.getcwd(), "Rubik", "inputs", "solve_lite.csv"))
-# df_test = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solve_lite.csv')
-# df = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\solves full hasta 2025-07-29.csv')
-# df_1 = read_csv_file('D:\\Documentos\\Coding\\Python\\Rubik\\inputs\\acum\\solves 2025-08-03.csv')
-# df = read_csv_file('D:\\Documentos\\Coding\\Python\\cube\\csv\\solve_lite_cleaned.csv')
+
 df_2 = read_csv_files_from_directory('D:\\Documentos\\Coding\\Python\\cube\\csv\\acum')
 df = df_2.copy()
 
 # Parámetro de tiempo máximo permitido (en milisegundos)
-MAX_TIME = 25000  # 30 segundos
+MAX_TIME = 20000
 trim_percent = 0.05  # 5% de recorte
 
 # Filtrar el DataFrame original
@@ -52,8 +35,9 @@ df_original = df.copy()
 df = df[(df["dnf"] == False) & (df["time"] <= MAX_TIME)].copy()
 len(df)
 # tomar solo una de las sesiones, campo "session_name"
-session_name = 'gan12'
 session_name = 'slow solves'
+session_name = None
+session_name = 'gan12'
 if session_name:
     df = df[df["session_name"] == session_name]
 
@@ -190,7 +174,7 @@ for time_column in time_columns:
 new_columns = {}
 for n in numbers:
     new_columns[f'pensar_ao{n}'] = df[f"time_ao{n}"] - df[f"total_execution_time_ao{n}"]
-    new_columns[f'pct_pensar_ao{n}'] = df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"]
+    new_columns[f'pct_pensar_ao{n}'] = 1 - (df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"])
     new_columns[f'total_f2l_1_ao{n}'] = df[f'f2l_1_pensar_ao{n}'] + df[f'f2l_1_ex_ao{n}']
     new_columns[f'total_f2l_2_ao{n}'] = df[f'f2l_2_pensar_ao{n}'] + df[f'f2l_2_ex_ao{n}']
     new_columns[f'total_f2l_3_ao{n}'] = df[f'f2l_3_pensar_ao{n}'] + df[f'f2l_3_ex_ao{n}']
@@ -404,7 +388,6 @@ plt.tight_layout()
 plt.show()
 
 
-
 # Calcular los mejores tiempos cada 10 resolves
 best_times = best_time_per_n_resolves(df, n=40)
 datos = best_times
@@ -487,3 +470,61 @@ plot_columns(df, [
     "oll_pensar_ao500",
     "pll_pensar_ao500",
 ], step=10)
+
+# plot in 2 different axes, one list of columns and another
+axis_1_columns = [
+    "f2l_2_pensar_ao500",
+    "f2l_3_pensar_ao500",
+    "f2l_4_pensar_ao500",
+    "oll_pensar_ao500",
+    "pll_pensar_ao500",
+]
+
+axis_2_columns = [
+    "time_ao500",
+]
+def plot_columns_dual_axis(df, axis_1_columns, axis_2_columns, step=0):
+    """
+    Plotea la evolución de varias columnas en el DataFrame dado en dos ejes Y diferentes.
+    """
+    if step == 0:
+        step = len(df) // 200  # muestreo por defecto
+
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    for col in axis_1_columns:
+        ax1.plot(
+            df.index[::step],
+            df[col][::step],
+            marker='o',
+            linestyle='-',
+            label=col
+        )
+    ax1.set_xlabel("Número de resolución")
+    ax1.set_ylabel("Tiempo (ms) - Eje 1")
+    ax1.grid(True)
+
+    ax2 = ax1.twinx()  # crear un segundo eje Y
+
+    for col in axis_2_columns:
+        ax2.plot(
+            df.index[::step],
+            df[col][::step],
+            marker='o',
+            linestyle='--',
+            color='red',
+            label=col
+        )
+    ax2.set_ylabel("Tiempo (ms) - Eje 2")
+
+    # Combinar leyendas de ambos ejes
+    lines_1, labels_1 = ax1.get_legend_handles_labels()
+    lines_2, labels_2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper right')
+
+    plt.title(f"Evolución de las columnas (muestreo cada {step})")
+    plt.tight_layout()
+    plt.show()
+
+plot_columns_dual_axis(df, axis_1_columns, axis_2_columns, step=10)
+
