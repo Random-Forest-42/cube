@@ -3,11 +3,11 @@
 
 select
     time_range_prev
-    , avg(total_competiciones) as avg_total_competiciones
-    , avg(competiciones_hasta_record) as avg_competiciones_hasta_record
-    , avg(avg_hasta_record) as avg_avg_hasta_record
-    , avg(competiciones_despues_record) as avg_competiciones_despues_record
-    , avg(avg_despues_record) as avg_avg_despues_record
+    , avg(total_competiciones) as avg_total_rounds
+    , avg(competiciones_hasta_record) as avg_rounds_to_record
+    , avg(avg_hasta_record) as avg_times_before_record
+    , avg(competiciones_despues_record) as avg_rounds_after_record
+    , avg(avg_despues_record) as avg_times_after_record
 from
 (
     select

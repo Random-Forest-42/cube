@@ -146,7 +146,15 @@ rename_columns(df, 'step_5_execution_time', 'oll_ex')
 rename_columns(df, 'step_6_recognition_time', 'pll_pensar')
 rename_columns(df, 'step_6_execution_time', 'pll_ex')
 
-time_columns = [
+rename_columns(df, 'step_0_slice_turns', 'cross_move_count')
+rename_columns(df, 'step_1_slice_turns', 'f2l_1_move_count')
+rename_columns(df, 'step_2_slice_turns', 'f2l_2_move_count')
+rename_columns(df, 'step_3_slice_turns', 'f2l_3_move_count')
+rename_columns(df, 'step_4_slice_turns', 'f2l_4_move_count')
+rename_columns(df, 'step_5_slice_turns', 'oll_move_count')
+rename_columns(df, 'step_6_slice_turns', 'pll_move_count')
+
+columns_to_calculate_ao = [
     'time',
     'slice_turns',
     'total_execution_time',
@@ -163,13 +171,20 @@ time_columns = [
     'oll_ex',
     'pll_pensar',
     'pll_ex',
+    'cross_move_count',
+    'f2l_1_move_count',
+    'f2l_2_move_count',
+    'f2l_3_move_count',
+    'f2l_4_move_count',
+    'oll_move_count',
+    'pll_move_count',
 ]
 
 
-for time_column in time_columns:
-    get_ao_columns(df, time_column, trim_percent=0.05, numbers=numbers)
+for col in columns_to_calculate_ao:
+    get_ao_columns(df, col, trim_percent=0.05, numbers=numbers)
     # print progress
-    print(f"Processed {time_column} for averages of {numbers}")
+    print(f"Processed {col} for averages of {numbers}")
 
 new_columns = {}
 for n in numbers:
@@ -528,3 +543,8 @@ def plot_columns_dual_axis(df, axis_1_columns, axis_2_columns, step=0):
 
 plot_columns_dual_axis(df, axis_1_columns, axis_2_columns, step=10)
 
+
+# step_0_slice_turns,step_0_face_turns,step_0_quarter_turns
+
+
+plot_columns_dual_axis(df, ['cross_move_count_ao500'], axis_2_columns, step=10)

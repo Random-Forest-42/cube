@@ -129,29 +129,33 @@ on
 -- idea 2: de los que hacen 3x3 entre x, x+1 segundos, cuanto hacen en 4x4
 
 select
-    ranks_33.time_range as time_33
-    , avg(ranks_44.world_rank) as avg_rank_44
-    -- , median(ranks_44.world_rank) as median_rank_44
-    , round(avg(ranks_44.best) / 100, 2) as avg_best_44
-    , count(1) as personas
+    ranks_33.time_range as time_range_33
+    , round(avg(ranks_44.best) / 100, 2) as avg_best_average_44
+    , count(1) as people
 from
 (
     select
         case
-            when best >= 900 and best < 1000 then '00:9s-10s'
-            when best >= 1000 and best < 1100 then '01:10s-11s'
-            when best >= 1100 and best < 1200 then '02:11s-12s'
-            when best >= 1200 and best < 1300 then '03:12s-13s'
-            when best >= 1300 and best < 1400 then '04:13s-14s'
-            when best >= 1400 and best < 1500 then '05:14s-15s'
-            when best >= 1500 and best < 1600 then '06:15s-16s'
-            when best >= 1600 and best < 1700 then '07:16s-17s'
-            when best >= 1700 and best < 1800 then '08:17s-18s'
-            when best >= 1800 and best < 1900 then '09:18s-19s'
-            when best >= 1900 and best < 2000 then '10:19s-20s'
-            when best >= 2000 and best < 2100 then '11:20s-21s'
-            when best >= 2100 and best < 2200 then '12:21s-22s'
-            else '2200+'
+            when best >= 500 and best < 600 then '05s-6s'
+            when best >= 600 and best < 700 then '06s-7s'
+            when best >= 700 and best < 800 then '07s-8s'
+            when best >= 800 and best < 900 then '08s-9s'
+            when best >= 900 and best < 1000 then '09s-10s'
+            when best >= 1000 and best < 1100 then '10s-11s'
+            when best >= 1100 and best < 1200 then '11s-12s'
+            when best >= 1200 and best < 1300 then '12s-13s'
+            when best >= 1300 and best < 1400 then '13s-14s'
+            when best >= 1400 and best < 1500 then '14s-15s'
+            when best >= 1500 and best < 1600 then '15s-16s'
+            when best >= 1600 and best < 1700 then '16s-17s'
+            when best >= 1700 and best < 1800 then '17s-18s'
+            when best >= 1800 and best < 1900 then '18s-19s'
+            when best >= 1900 and best < 2000 then '19s-20s'
+            when best >= 2000 and best < 2100 then '20s-21s'
+            when best >= 2100 and best < 2200 then '21s-22s'
+            when best >= 2200 and best < 2300 then '22s-23s'
+            when best >= 2300 and best < 2400 then '23s-24s'
+        else '24:00+'
         end as time_range
         , world_rank
         , person_id as wca_id
@@ -160,7 +164,6 @@ from
         ranks_average
     where
         event_id = '333'
-        and best >= 900 and best < 2200
 ) as ranks_33
 inner join
 (
@@ -228,11 +231,8 @@ inner join
 ) ranks_44
 on
     ranks_33.wca_id = ranks_44.wca_id
--- where
---     ranks_33.time_range >= 1500 and ranks_33.best < 2200
---     and ranks_44.best >= 2100 and ranks_44.best < 20000
 group by 1
-
+order by 1 asc
 
 
 select
@@ -291,3 +291,60 @@ from
         ranks_33.wca_id = ranks_other_event.wca_id
 group by 1, 2
 order by 1, 2 asc
+
+
+
+select
+    ranks_33.time_range as time_range_33
+    , round(avg(ranks_other_event.best) / 100, 2) as avg_best_average_other_event
+    , count(1) as people
+from
+(
+    select
+        case
+            when best >= 500 and best < 600 then '05s-6s'
+            when best >= 600 and best < 700 then '06s-7s'
+            when best >= 700 and best < 800 then '07s-8s'
+            when best >= 800 and best < 900 then '08s-9s'
+            when best >= 900 and best < 1000 then '09s-10s'
+            when best >= 1000 and best < 1100 then '10s-11s'
+            when best >= 1100 and best < 1200 then '11s-12s'
+            when best >= 1200 and best < 1300 then '12s-13s'
+            when best >= 1300 and best < 1400 then '13s-14s'
+            when best >= 1400 and best < 1500 then '14s-15s'
+            when best >= 1500 and best < 1600 then '15s-16s'
+            when best >= 1600 and best < 1700 then '16s-17s'
+            when best >= 1700 and best < 1800 then '17s-18s'
+            when best >= 1800 and best < 1900 then '18s-19s'
+            when best >= 1900 and best < 2000 then '19s-20s'
+            when best >= 2000 and best < 2100 then '20s-21s'
+            when best >= 2100 and best < 2200 then '21s-22s'
+            when best >= 2200 and best < 2300 then '22s-23s'
+            when best >= 2300 and best < 2400 then '23s-24s'
+        else '24:00+'
+        end as time_range
+        , world_rank
+        , person_id as wca_id
+        , best
+    from
+        ranks_average
+    where
+        event_id = '333'
+) as ranks_33
+inner join
+(
+    select
+        world_rank
+        , best
+        , person_id as wca_id
+    from
+        ranks_average
+    where
+        event_id = ':COMPARE_EVENT'
+) ranks_other_event
+on
+    ranks_33.wca_id = ranks_other_event.wca_id
+group by 1
+order by 1 asc
+
+https://statistics.worldcubeassociation.org/database-query?sqlQuery=%0A%0Aselect%0A++++ranks_33.time_range+as+time_range_33%0A++++%2C+round%28avg%28ranks_other_event.best%29+%2F+100%2C+2%29+as+avg_best_average_55%0A++++%2C+count%281%29+as+people%0Afrom%0A%28%0A++++select%0A++++++++case%0A++++++++++++when+best+%3E%3D+500+and+best+%3C+600+then+%2705s-6s%27%0A++++++++++++when+best+%3E%3D+600+and+best+%3C+700+then+%2706s-7s%27%0A++++++++++++when+best+%3E%3D+700+and+best+%3C+800+then+%2707s-8s%27%0A++++++++++++when+best+%3E%3D+800+and+best+%3C+900+then+%2708s-9s%27%0A++++++++++++when+best+%3E%3D+900+and+best+%3C+1000+then+%2709s-10s%27%0A++++++++++++when+best+%3E%3D+1000+and+best+%3C+1100+then+%2710s-11s%27%0A++++++++++++when+best+%3E%3D+1100+and+best+%3C+1200+then+%2711s-12s%27%0A++++++++++++when+best+%3E%3D+1200+and+best+%3C+1300+then+%2712s-13s%27%0A++++++++++++when+best+%3E%3D+1300+and+best+%3C+1400+then+%2713s-14s%27%0A++++++++++++when+best+%3E%3D+1400+and+best+%3C+1500+then+%2714s-15s%27%0A++++++++++++when+best+%3E%3D+1500+and+best+%3C+1600+then+%2715s-16s%27%0A++++++++++++when+best+%3E%3D+1600+and+best+%3C+1700+then+%2716s-17s%27%0A++++++++++++when+best+%3E%3D+1700+and+best+%3C+1800+then+%2717s-18s%27%0A++++++++++++when+best+%3E%3D+1800+and+best+%3C+1900+then+%2718s-19s%27%0A++++++++++++when+best+%3E%3D+1900+and+best+%3C+2000+then+%2719s-20s%27%0A++++++++++++when+best+%3E%3D+2000+and+best+%3C+2100+then+%2720s-21s%27%0A++++++++++++when+best+%3E%3D+2100+and+best+%3C+2200+then+%2721s-22s%27%0A++++++++++++when+best+%3E%3D+2200+and+best+%3C+2300+then+%2722s-23s%27%0A++++++++++++when+best+%3E%3D+2300+and+best+%3C+2400+then+%2723s-24s%27%0A++++++++else+%2724%3A00%2B%27%0A++++++++end+as+time_range%0A++++++++%2C+world_rank%0A++++++++%2C+person_id+as+wca_id%0A++++++++%2C+best%0A++++from%0A++++++++ranks_average%0A++++where%0A++++++++event_id+%3D+%27333%27%0A%29+as+ranks_33%0Ainner+join%0A%28%0A++++select%0A++++++++world_rank%0A++++++++%2C+best%0A++++++++%2C+person_id+as+wca_id%0A++++from%0A++++++++ranks_average%0A++++where%0A++++++++event_id+%3D+%27%3ACOMPARE_EVENT%27%0A%29+ranks_other_event%0Aon%0A++++ranks_33.wca_id+%3D+ranks_other_event.wca_id%0Agroup+by+1%0Aorder+by+1+asc%0A
