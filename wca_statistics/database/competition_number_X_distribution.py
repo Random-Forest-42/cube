@@ -11,11 +11,9 @@ cursor = conn.cursor()
 
 image_name_suffix = 'histogram_of_average_times_in_competition_number_'
 
-exclude_china = False
-if exclude_china:
-    image_name_suffix += 'exclude_china_'
-
-competition_number = 10
+country = 'Spain'
+comparison_country_sql = '='
+competition_number = 5
 
 competition_number_equal_or_greater_than = True
 
@@ -25,13 +23,13 @@ if competition_number_equal_or_greater_than:
 
 def plot_competition_number(competition_number):
     country_filter = ''
-    if exclude_china:
-        country_filter = 'and T1.personId not in (select personId from persons where countryId = "CHN")'
+    if country:
+        country_filter = f'and person_countryId {comparison_country_sql} "{country}"'
     if competition_number_equal_or_greater_than:
         sql_comparison = '>='
     else:
         sql_comparison = '='
-    query = f"""
+    query_old = f"""
     select
         res.average
     from
@@ -94,14 +92,34 @@ def plot_competition_number(competition_number):
         res.personId = analysis_date.personId
         and res.competition_date = analysis_date.competition_date
     """
+    query = f"""
+    select
+        average
+    from
+    (
+
+        select
+            personId
+            , min(average) as average
+        from
+            results_extended_with_rank
+        where
+            person_competition_number {sql_comparison} {competition_number}
+            and eventId = '333'
+            {country_filter}
+            and average > 0
+        group by
+            personId
+    )
+    """
+    print(query)
 
     cursor.execute(query)
     df = pd.read_sql_query(query, conn)
     df['average_seconds'] = df['average'] / 100.0
 
-
     ### PLOT
-    print(f"Found {len(df)} first averages")
+    print(f"Found {len(df)} rows")
     print("Stats (in seconds):")
     print(df['average_seconds'].describe())
 
@@ -140,4 +158,4 @@ def plot_competition_number(competition_number):
 #     plot_competition_number(i)
 # for i in range(1, 2):
 #     plot_competition_number(i)
-plot_competition_number(40)
+plot_competition_number(competition_number)

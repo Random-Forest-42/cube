@@ -43,7 +43,8 @@ JOIN
     Persons p ON r.personId = p.id
 WHERE
     r.eventId = '333'
-    --AND r.roundTypeId = 'f'
+    AND r.roundTypeId = 'f'
+    and r.average > 0
 ORDER BY
     r.best
 LIMIT 10;
@@ -57,12 +58,59 @@ WHERE
     id = '2024ALFA08'
 """
 
+query = '''
+SELECT
+    T1.personId,
+    T1.average  -- El tiempo de la media en centésimas de segundo
+FROM
+    Results AS T1
+JOIN
+    Rounds AS T2 ON T1.competitionId = T2.competitionId
+                AND T1.eventId = T2.eventId
+                AND T1.roundTypeId = T2.id
+WHERE
+    T1.eventId = '333'
+    AND T2.roundNumber = 1  -- Filtramos por la primera ronda (Round Number 1)
+    AND T1.average > 0      -- Filtramos los DNF (-1) y DNS (0)
+ORDER BY
+    T1.average;
+'''
+
+query = '''
+SELECT
+    T1.personId,
+    T1.competitionId,
+    T3.startDate AS competitionDate,
+    T1.eventId,
+    T1.roundTypeId,
+    T1.best,
+    T1.average
+FROM
+    Results AS T1
+JOIN
+    Competitions AS T3 ON T1.competitionId = T3.id
+WHERE
+    T1.average > 0
+    AND t1.roundTypeId IN ('1', 'r1', '0') -- Filtra los códigos de ronda más probables para la "primera ronda"
+    AND T3.startDate = (
+        SELECT MIN(T2.startDate)
+        FROM Results AS T4
+        JOIN Competitions AS T2 ON T4.competitionId = T2.id
+        WHERE T4.personId = T1.personId
+        -- Puedes añadir una condición aquí para asegurar que el MIN(startDate)
+        -- corresponde a una ronda que no sea de exhibición, pero es opcional.
+    )
+ORDER BY
+    T1.personId
+'''
+
 columns, records = run_wca_query(query)
 
 if columns and records:
     print(f"Columnas: {columns}")
     print("-" * 30)
     for record in records:
+        print(record)
         # El tiempo 'best' de WCA está en centésimas de segundo, lo convertimos a segundos.
         time_sec = record[1] / 100.0 if record[1] is not None else "N/A"
         print(f"Nombre: {record[0]}, Mejor Tiempo (3x3 Final): {time_sec} s")

@@ -41,6 +41,11 @@ session_name = 'gan12'
 if session_name:
     df = df[df["session_name"] == session_name]
 
+# take only solutions with step_0_slice_turns > 0. this is to avoid weird solution. TODO: mejorar para no perder x-cross
+df = df[df["step_0_slice_turns"] > 0]
+# quedarse solo con solves raras
+# df = df[df["step_0_slice_turns"] == 0]
+
 len(df)
 # take only last X rows
 last_rows = 1000
@@ -546,5 +551,14 @@ plot_columns_dual_axis(df, axis_1_columns, axis_2_columns, step=10)
 
 # step_0_slice_turns,step_0_face_turns,step_0_quarter_turns
 
+move_count_columns = [
+    'cross_move_count_ao500',
+    'f2l_1_move_count_ao500',
+    'f2l_2_move_count_ao500',
+    'f2l_3_move_count_ao500',
+    'f2l_4_move_count_ao500',
+    # 'oll_move_count_ao500',
+    # 'pll_move_count_ao500',
+]
 
-plot_columns_dual_axis(df, ['cross_move_count_ao500'], axis_2_columns, step=10)
+plot_columns_dual_axis(df, move_count_columns, axis_2_columns, step=10)
