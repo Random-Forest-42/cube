@@ -11,7 +11,7 @@ cursor = conn.cursor()
 
 image_name_suffix = 'histogram_of_average_times_in_competition_number_'
 
-country = 'Spain'
+country = 'USA'
 comparison_country_sql = '='
 competition_number = 5
 
