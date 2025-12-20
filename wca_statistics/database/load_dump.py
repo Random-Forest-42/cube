@@ -3,17 +3,11 @@ import pandas as pd
 import glob
 import os
 
-# --- Configuration ---
-# The name of the SQLite database file you want to create (or connect to)
 DB_FILE = "wca_data.db"
 DB_FILE = "D:\\Documentos\\Coding\\Python\\wca_data.db"
-# The folder where you unzipped the TSV files
-TSV_FOLDER = "path/to/your/WCA_TSV_FILES"
 TSV_FOLDER = "D:\\Descargas\\WCA_export346_20251212T000027Z.tsv"
 
-# e.g., "C:/Users/YourName/Downloads/WCA_export_20250101"
 
-# --- Import Process ---
 print(f"Connecting to database: {DB_FILE}")
 conn = sqlite3.connect(DB_FILE)
 

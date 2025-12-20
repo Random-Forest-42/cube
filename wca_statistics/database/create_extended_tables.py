@@ -146,6 +146,10 @@ query = f'drop INDEX if exists idx_country_t2;'
 cursor.execute(query)
 query = f'CREATE INDEX idx_country_t2 ON {table_name_2} (person_countryId);'
 cursor.execute(query)
+query = f'drop INDEX if exists idx_t2_event;'
+cursor.execute(query)
+query = f'CREATE INDEX idx_t2_event ON {table_name_2} (eventID);'
+cursor.execute(query)
 
 conn.commit()
 
