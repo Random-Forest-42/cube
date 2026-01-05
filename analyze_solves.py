@@ -7,6 +7,13 @@ import pandas as pd
 import os
 import numpy as np
 
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
+import seaborn as sns
+
+
 def read_csv_files_from_directory(directory):
     """
     Reads all CSV files from a directory and concatenates them into a single DataFrame.
@@ -28,12 +35,13 @@ df = df_2.copy()
 
 # Parámetro de tiempo máximo permitido (en milisegundos)
 MAX_TIME = 20000
+MAX_TIME = 30000
 trim_percent = 0.05  # 5% de recorte
 
 # Filtrar el DataFrame original
 df_original = df.copy()
 df = df[(df["dnf"] == False) & (df["time"] <= MAX_TIME)].copy()
-len(df)
+print(f"Filtered out {len(df_original) - len(df)} rows due to DNF or time > {MAX_TIME} ms.")
 # tomar solo una de las sesiones, campo "session_name"
 session_name = 'slow solves'
 session_name = None
@@ -43,10 +51,18 @@ if session_name:
 
 # take only solutions with step_0_slice_turns > 0. this is to avoid weird solution. TODO: mejorar para no perder x-cross
 df = df[df["step_0_slice_turns"] > 0]
-# quedarse solo con solves raras
-# df = df[df["step_0_slice_turns"] == 0]
 
-len(df)
+# calculate a column with number of steps skipped, ex step_0_slice_turns = 0, step_1_slice_turns = 0
+df['steps_skipped'] = 0
+for i in range(7):
+    df['steps_skipped'] += (df[f'step_{i}_slice_turns'] == 0).astype(int)
+
+# take out solutions with 2 or more steps skipped, to avoid weird solutions
+# print the number of rows before and after
+print(f"Rows before filtering steps skipped: {len(df)}")
+df = df[df['steps_skipped'] < 2]
+print(f"Rows after filtering steps skipped: {len(df)}")
+
 # take only last X rows
 last_rows = 1000
 last_rows = None
@@ -137,18 +153,20 @@ def rename_columns(df, old_col, new_col):
     else:
         print(f"Column '{old_col}' not found in DataFrame")
 
+# for col in  df.columns:
+#     print(col)
 rename_columns(df, 'step_0_execution_time', 'cross')
-rename_columns(df, 'step_1_recognition_time', 'f2l_1_pensar')
+rename_columns(df, 'step_1_recognition_time', 'f2l_1_think')
 rename_columns(df, 'step_1_execution_time', 'f2l_1_ex')
 rename_columns(df, 'step_2_execution_time', 'f2l_2_ex')
 rename_columns(df, 'step_3_execution_time', 'f2l_3_ex')
 rename_columns(df, 'step_4_execution_time', 'f2l_4_ex')
-rename_columns(df, 'step_2_recognition_time', 'f2l_2_pensar')
-rename_columns(df, 'step_3_recognition_time', 'f2l_3_pensar')
-rename_columns(df, 'step_4_recognition_time', 'f2l_4_pensar')
-rename_columns(df, 'step_5_recognition_time', 'oll_pensar')
+rename_columns(df, 'step_2_recognition_time', 'f2l_2_think')
+rename_columns(df, 'step_3_recognition_time', 'f2l_3_think')
+rename_columns(df, 'step_4_recognition_time', 'f2l_4_think')
+rename_columns(df, 'step_5_recognition_time', 'oll_think')
 rename_columns(df, 'step_5_execution_time', 'oll_ex')
-rename_columns(df, 'step_6_recognition_time', 'pll_pensar')
+rename_columns(df, 'step_6_recognition_time', 'pll_think')
 rename_columns(df, 'step_6_execution_time', 'pll_ex')
 
 rename_columns(df, 'step_0_slice_turns', 'cross_move_count')
@@ -164,17 +182,17 @@ columns_to_calculate_ao = [
     'slice_turns',
     'total_execution_time',
     'cross',
-    'f2l_1_pensar',
+    'f2l_1_think',
     'f2l_1_ex',
     'f2l_2_ex',
     'f2l_3_ex',
     'f2l_4_ex',
-    'f2l_2_pensar',
-    'f2l_3_pensar',
-    'f2l_4_pensar',
-    'oll_pensar',
+    'f2l_2_think',
+    'f2l_3_think',
+    'f2l_4_think',
+    'oll_think',
     'oll_ex',
-    'pll_pensar',
+    'pll_think',
     'pll_ex',
     'cross_move_count',
     'f2l_1_move_count',
@@ -185,22 +203,56 @@ columns_to_calculate_ao = [
     'pll_move_count',
 ]
 
+# warning: performance issue if we do it one by one
+# for col in columns_to_calculate_ao:
+#     get_ao_columns(df, col, trim_percent=0.05, numbers=numbers)
+#     # print progress
+#     print(f"Processed {col} for averages of {numbers}")
 
+ao_columns_dict = {}
 for col in columns_to_calculate_ao:
-    get_ao_columns(df, col, trim_percent=0.05, numbers=numbers)
-    # print progress
-    print(f"Processed {col} for averages of {numbers}")
+    for n in numbers:
+        # Calcula la columna average
+        averages = []
+        values = df[col].tolist()
+        trim_percent_param = 0 if n in (5, 12) else 0.05
+        for i in range(len(values)):
+            if i + 1 < n:
+                averages.append(np.nan)
+                continue
+            window = values[i+1-n:i+1]
+            if n in (5, 12):
+                trimmed = sorted(window)[1:-1]
+            elif trim_percent_param > 0:
+                k = int(len(window) * trim_percent_param)
+                trimmed = sorted(window)[k:len(window)-k or None]
+            else:
+                trimmed = window
+            avg = np.mean(trimmed) if trimmed else np.nan
+            averages.append(avg)
+        ao_columns_dict[f"{col}_ao{n}"] = averages
+
+# 2. Haz un solo concat al final
+df = pd.concat([df, pd.DataFrame(ao_columns_dict)], axis=1)
 
 new_columns = {}
 for n in numbers:
-    new_columns[f'pensar_ao{n}'] = df[f"time_ao{n}"] - df[f"total_execution_time_ao{n}"]
-    new_columns[f'pct_pensar_ao{n}'] = 1 - (df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"])
-    new_columns[f'total_f2l_1_ao{n}'] = df[f'f2l_1_pensar_ao{n}'] + df[f'f2l_1_ex_ao{n}']
-    new_columns[f'total_f2l_2_ao{n}'] = df[f'f2l_2_pensar_ao{n}'] + df[f'f2l_2_ex_ao{n}']
-    new_columns[f'total_f2l_3_ao{n}'] = df[f'f2l_3_pensar_ao{n}'] + df[f'f2l_3_ex_ao{n}']
-    new_columns[f'total_f2l_4_ao{n}'] = df[f'f2l_4_pensar_ao{n}'] + df[f'f2l_4_ex_ao{n}']
-    new_columns[f'total_oll_ao{n}'] = df[f'oll_pensar_ao{n}'] + df[f'oll_ex_ao{n}']
-    new_columns[f'total_pll_ao{n}'] = df[f'pll_pensar_ao{n}'] + df[f'pll_ex_ao{n}']
+    new_columns[f'think_ao{n}'] = df[f"time_ao{n}"] - df[f"total_execution_time_ao{n}"]
+    new_columns[f'pct_think_ao{n}'] = 1 - (df[f"total_execution_time_ao{n}"] / df[f"time_ao{n}"])
+    new_columns[f'total_f2l_1_ao{n}'] = df[f'f2l_1_think_ao{n}'] + df[f'f2l_1_ex_ao{n}']
+    new_columns[f'total_f2l_2_ao{n}'] = df[f'f2l_2_think_ao{n}'] + df[f'f2l_2_ex_ao{n}']
+    new_columns[f'total_f2l_3_ao{n}'] = df[f'f2l_3_think_ao{n}'] + df[f'f2l_3_ex_ao{n}']
+    new_columns[f'total_f2l_4_ao{n}'] = df[f'f2l_4_think_ao{n}'] + df[f'f2l_4_ex_ao{n}']
+    new_columns[f'total_oll_ao{n}'] = df[f'oll_think_ao{n}'] + df[f'oll_ex_ao{n}']
+    new_columns[f'total_pll_ao{n}'] = df[f'pll_think_ao{n}'] + df[f'pll_ex_ao{n}']
+    new_columns[f'total_f2l_1'] = df[f'f2l_1_think'] + df[f'f2l_1_ex']
+    new_columns[f'total_f2l_2'] = df[f'f2l_2_think'] + df[f'f2l_2_ex']
+    new_columns[f'total_f2l_3'] = df[f'f2l_3_think'] + df[f'f2l_3_ex']
+    new_columns[f'total_f2l_4'] = df[f'f2l_4_think'] + df[f'f2l_4_ex']
+    new_columns[f'total_oll'] = df[f'oll_think'] + df[f'oll_ex']
+    new_columns[f'total_pll'] = df[f'pll_think'] + df[f'pll_ex']
+    new_columns[f'total_think'] = df[f'time'] - df[f'total_execution_time']
+    new_columns[f'cross_1'] = df[f'cross'] + df[f'f2l_1_think'] + df[f'f2l_1_ex']
 
 df = pd.concat([df, pd.DataFrame(new_columns)], axis=1)
 
@@ -263,9 +315,9 @@ def plot_columns(df, columns, step=0):
 
 
 plot_ao(df, 'time_ao250', step=10)
-plot_ao(df, 'pensar_ao250', step=10, col2='total_execution_time_ao250')
-plot_ao(df, 'pct_pensar_ao250')
-plot_ao(df, 'f2l_1_pensar_ao250')
+plot_ao(df, 'think_ao250', step=10, col2='total_execution_time_ao250')
+plot_ao(df, 'pct_think_ao250')
+plot_ao(df, 'f2l_1_think_ao250')
 plot_ao(df, 'total_oll_ao250')
 plot_ao(df, 'total_pll_ao250')
 
@@ -377,10 +429,6 @@ def plot_best_times(best_times, title="Mejor tiempo cada 10 resolves"):
 # plot_best_times(best_times)
 # añadir linea de regresion al anterior plot
 
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.linear_model import LinearRegression
-
 # Lista de números
 datos = best_times
 
@@ -480,24 +528,24 @@ for key, value in ratios.items():
         else:
             print(f"{key}: {value:.3f} (Igual que óptimo: {optimal_value:.3f})")
 
-#### intentamos bajar el tiempo de pensar en f2l
-# plot f2l_pensar_ao500
+#### intentamos bajar el tiempo de think en f2l
+# plot f2l_think_ao500
 plot_columns(df, [
-    # "f2l_1_pensar_ao500",
-    "f2l_2_pensar_ao500",
-    "f2l_3_pensar_ao500",
-    "f2l_4_pensar_ao500",
-    "oll_pensar_ao500",
-    "pll_pensar_ao500",
+    # "f2l_1_think_ao500",
+    "f2l_2_think_ao500",
+    "f2l_3_think_ao500",
+    "f2l_4_think_ao500",
+    "oll_think_ao500",
+    "pll_think_ao500",
 ], step=10)
 
 # plot in 2 different axes, one list of columns and another
 axis_1_columns = [
-    "f2l_2_pensar_ao500",
-    "f2l_3_pensar_ao500",
-    "f2l_4_pensar_ao500",
-    "oll_pensar_ao500",
-    "pll_pensar_ao500",
+    "f2l_2_think_ao500",
+    "f2l_3_think_ao500",
+    "f2l_4_think_ao500",
+    "oll_think_ao500",
+    "pll_think_ao500",
 ]
 
 axis_2_columns = [
@@ -562,3 +610,169 @@ move_count_columns = [
 ]
 
 plot_columns_dual_axis(df, move_count_columns, axis_2_columns, step=10)
+
+############################################################
+############################################################
+############################################################
+######################### HISTOGRAMAS ###################################
+############################################################
+############################################################
+############################################################
+
+# cortar valores extremos para histogramas, en base a si en el nombre de la columna hay "move_count"
+max_move_count = 25
+
+df_clipped = df.copy()
+for col in df_clipped.columns:
+    if 'move_count' in col:
+        df_clipped = df_clipped[df_clipped[col] <= max_move_count]
+
+# histograma de algunas columnas
+histogram_columns = [
+    'time',
+    'slice_turns',
+    'total_execution_time',
+    'cross',
+    'f2l_1_think',
+    'f2l_1_ex',
+    'f2l_2_ex',
+    'f2l_3_ex',
+    'f2l_4_ex',
+    'f2l_2_think',
+    'f2l_3_think',
+    'f2l_4_think',
+    'oll_think',
+    'oll_ex',
+    'pll_think',
+    'pll_ex',
+    "total_f2l_1",
+    "total_f2l_2",
+    "total_f2l_3",
+    "total_f2l_4",
+    "total_oll",
+    "total_pll",
+    'cross_1'
+]
+
+# añadir todos los graficos en un solo plot con subplots
+fig, axs = plt.subplots(len(histogram_columns), figsize=(10, 5 * len(histogram_columns)))
+for i, col in enumerate(histogram_columns):
+    axs[i].hist(df_clipped[col], bins=50, edgecolor='black', alpha=0.7)
+    axs[i].set_title(f'Histograma de {col}')
+    # añadir linea puntos con mediana y media
+    mean_value = df_clipped[col].mean()
+    median_value = df_clipped[col].median()
+    axs[i].axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Media: {mean_value:.2f}')
+    axs[i].axvline(median_value, color='blue', linestyle='dashed', linewidth=1, label=f'Mediana: {median_value:.2f}')
+    axs[i].set_xlabel('Valor')
+    axs[i].set_ylabel('Frecuencia')
+    axs[i].grid(axis='y', alpha=0.5)
+    axs[i].legend()
+
+move_count_hist_columns = [
+    'cross_move_count',
+    'f2l_1_move_count',
+    'f2l_2_move_count',
+    'f2l_3_move_count',
+    'f2l_4_move_count',
+    'oll_move_count',
+    'pll_move_count',
+    'slice_turns'
+]
+
+think_columns = [
+    'f2l_1_think',
+    'f2l_2_think',
+    'f2l_3_think',
+    'f2l_4_think',
+    'oll_think',
+    'pll_think',
+    'total_think',
+]
+
+total_columns = [
+    "total_f2l_1",
+    "total_f2l_2",
+    "total_f2l_3",
+    "total_f2l_4",
+    "total_oll",
+    "total_pll",
+    'cross_1',
+    'time',
+    'turns_per_second',
+    'total_execution_time',
+    'total_think',
+]
+
+def hist_grid(df, columns, title=None):
+    n = len(columns)
+    cols_per_row = 4
+    rows = math.ceil(n / cols_per_row)
+    fig, axes = plt.subplots(rows, cols_per_row, figsize=(cols_per_row * 4, rows * 3))
+    axes = axes.flatten()
+    for i, col in enumerate(columns):
+        sns.histplot(df[col], bins=50, ax=axes[i], kde=True)
+        axes[i].set_title(f'Histograma de {col}')
+        axes[i].set_xlabel('Valor')
+        axes[i].set_ylabel('Frecuencia')
+        axes[i].grid(axis='y', alpha=0.5)
+        # añadir linea puntos con mediana y media
+        mean_value = df[col].mean()
+        median_value = df[col].median()
+        axes[i].axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Media: {mean_value:.2f}')
+        axes[i].axvline(median_value, color='blue', linestyle='dashed', linewidth=1, label=f'Mediana: {median_value:.2f}')
+        axes[i].legend()
+    if title:
+        plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    plt.show()
+
+hist_grid(df_clipped, move_count_hist_columns)
+
+# df solo con solves sub 13 segundos
+df_sub_13 = df_clipped[df_clipped['time'] < 13000]
+df_sub_15 = df_clipped[df_clipped['time'] < 15000]
+print(len(df_sub_13))
+df_15_20 = df_clipped[(df_clipped['time'] >= 15000) & (df_clipped['time'] < 20000)]
+print(len(df_15_20))
+
+hist_grid(df_sub_13, move_count_hist_columns, title='movecount sub 13s')
+hist_grid(df_15_20, move_count_hist_columns, title='movecount 15-20s')
+
+hist_grid(df_sub_13, think_columns, title='think sub 13s')
+hist_grid(df_15_20, think_columns, title='think 15-20s')
+
+hist_grid(df_sub_13, total_columns, title='totales sub 13s')
+hist_grid(df_15_20, total_columns, title='totales 15-20s')
+
+# funcion que dado dos dataframes y un listado de columnas, muestre la diferencia de medianas, en absouluto y porcentual
+def compare_median_differences(df1, df2, columns, label1='DF1', label2='DF2'):
+    """
+    Compara las diferencias de medianas entre dos DataFrames para un listado de columnas.
+    """
+    print(f"Diferencias de medianas entre {label1} y {label2}:")
+    col_info = {}
+    for col in columns:
+        median1 = df1[col].median()
+        median2 = df2[col].median()
+        difference = median1 - median2
+        percent_difference = (difference / median1 * 100) if median1 != 0 else 0
+        col_info[col] = {
+            'median1': median1,
+            'median2': median2,
+            'difference': difference,
+            'percent_difference': percent_difference
+        }
+        print(f"{col}: {label1} mediana = {median1:.2f}, {label2} mediana = {median2:.2f}, diferencia = {difference:.2f}, diferencia porcentual = {percent_difference:.2f}%")
+    # plot para visualizar las diferencias en porcentaje de medianas
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.barh(columns, [col_info[col]['percent_difference'] for col in columns])
+    ax.set_xlabel('Diferencia porcentual de Medianas')
+    ax.set_title(f'Diferencias de Medianas entre {label1} y {label2}')
+    plt.show()
+
+compare_median_differences(df_sub_13, df_15_20, move_count_hist_columns, label1='Sub 13s', label2='15-20s')
+compare_median_differences(df_sub_13, df_15_20, think_columns, label1='Sub 13s', label2='15-20s')
+compare_median_differences(df_sub_15, df_15_20, think_columns, label1='Sub 15s', label2='15-20s')
+
+compare_median_differences(df_sub_13, df_15_20, total_columns, label1='Sub 13s', label2='15-20s')

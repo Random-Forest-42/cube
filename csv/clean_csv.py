@@ -7,7 +7,7 @@ import pandas as pd
 import os
 import numpy as np
 
-input_path = 'D:\\Documentos\\Coding\\Python\\Rubik - no git\\inputs\\2025-12-01 to 2025-12-14.csv'
+input_path = 'D:\\Documentos\\Coding\\Python\\Rubik - no git\\inputs\\2025-12-15 to 2025-12-29.csv'
 df = pd.read_csv(input_path)
 # for c in df.columns:
 #     # calculate the size in bytes of each column
