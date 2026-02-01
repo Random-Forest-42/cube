@@ -13,6 +13,10 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 import seaborn as sns
 
+### FLAGS para hacer algunos pasos o no
+
+flag_histograms = True
+flag_scatterplots = True
 
 def read_csv_files_from_directory(directory):
     """
@@ -64,8 +68,8 @@ df = df[df['steps_skipped'] < 2]
 print(f"Rows after filtering steps skipped: {len(df)}")
 
 # take only last X rows
-last_rows = 1000
 last_rows = None
+last_rows = 5000
 if last_rows:
     df = df.iloc[-last_rows:]
 
@@ -632,6 +636,7 @@ histogram_columns = [
     'time',
     'slice_turns',
     'total_execution_time',
+    'total_think',
     'cross',
     'f2l_1_think',
     'f2l_1_ex',
@@ -705,8 +710,8 @@ total_columns = [
 ]
 
 def hist_grid(df, columns, title=None):
-    n = len(columns)
     cols_per_row = 4
+    n = len(columns)
     rows = math.ceil(n / cols_per_row)
     fig, axes = plt.subplots(rows, cols_per_row, figsize=(cols_per_row * 4, rows * 3))
     axes = axes.flatten()
@@ -726,24 +731,6 @@ def hist_grid(df, columns, title=None):
         plt.suptitle(title, fontsize=16)
     plt.tight_layout()
     plt.show()
-
-hist_grid(df_clipped, move_count_hist_columns)
-
-# df solo con solves sub 13 segundos
-df_sub_13 = df_clipped[df_clipped['time'] < 13000]
-df_sub_15 = df_clipped[df_clipped['time'] < 15000]
-print(len(df_sub_13))
-df_15_20 = df_clipped[(df_clipped['time'] >= 15000) & (df_clipped['time'] < 20000)]
-print(len(df_15_20))
-
-hist_grid(df_sub_13, move_count_hist_columns, title='movecount sub 13s')
-hist_grid(df_15_20, move_count_hist_columns, title='movecount 15-20s')
-
-hist_grid(df_sub_13, think_columns, title='think sub 13s')
-hist_grid(df_15_20, think_columns, title='think 15-20s')
-
-hist_grid(df_sub_13, total_columns, title='totales sub 13s')
-hist_grid(df_15_20, total_columns, title='totales 15-20s')
 
 # funcion que dado dos dataframes y un listado de columnas, muestre la diferencia de medianas, en absouluto y porcentual
 def compare_median_differences(df1, df2, columns, label1='DF1', label2='DF2'):
@@ -771,8 +758,103 @@ def compare_median_differences(df1, df2, columns, label1='DF1', label2='DF2'):
     ax.set_title(f'Diferencias de Medianas entre {label1} y {label2}')
     plt.show()
 
-compare_median_differences(df_sub_13, df_15_20, move_count_hist_columns, label1='Sub 13s', label2='15-20s')
-compare_median_differences(df_sub_13, df_15_20, think_columns, label1='Sub 13s', label2='15-20s')
-compare_median_differences(df_sub_15, df_15_20, think_columns, label1='Sub 15s', label2='15-20s')
+def heatmap_correlation(df, columns):
+    corr = df[columns].corr()
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", square=True, cbar_kws={"shrink": .8})
+    plt.title("Heatmap de Correlación")
+    plt.show()
 
-compare_median_differences(df_sub_13, df_15_20, total_columns, label1='Sub 13s', label2='15-20s')
+if flag_histograms:
+    hist_grid(df_clipped, move_count_hist_columns)
+
+    # df solo con solves sub 13 segundos
+    df_sub_13 = df_clipped[df_clipped['time'] < 13000]
+    df_sub_15 = df_clipped[df_clipped['time'] < 15000]
+    print(len(df_sub_13))
+    df_15_20 = df_clipped[(df_clipped['time'] >= 15000) & (df_clipped['time'] < 20000)]
+    print(len(df_15_20))
+
+    hist_grid(df_sub_13, move_count_hist_columns, title='movecount sub 13s')
+    hist_grid(df_15_20, move_count_hist_columns, title='movecount 15-20s')
+
+    hist_grid(df_sub_13, think_columns, title='think sub 13s')
+    hist_grid(df_15_20, think_columns, title='think 15-20s')
+
+    hist_grid(df_sub_13, total_columns, title='totales sub 13s')
+    hist_grid(df_15_20, total_columns, title='totales 15-20s')
+
+
+    compare_median_differences(df_sub_13, df_15_20, move_count_hist_columns, label1='Sub 13s', label2='15-20s')
+    compare_median_differences(df_sub_13, df_15_20, think_columns, label1='Sub 13s', label2='15-20s')
+    compare_median_differences(df_sub_15, df_15_20, think_columns, label1='Sub 15s', label2='15-20s')
+
+    compare_median_differences(df_sub_13, df_15_20, total_columns, label1='Sub 13s', label2='15-20s')
+    heatmap_correlation(df_clipped, histogram_columns)
+
+colums_to_scatterplot = [c for c in histogram_columns if c not in ['time']]
+# scatter vs column time
+def scatter_plot_columns(df, columns):
+    cols_per_row = 2
+    n = len(columns)
+    rows = math.ceil(n / cols_per_row)
+    fig, axs = plt.subplots(len(columns), 1, figsize=(10, 5 * len(columns)))
+    for i, col in enumerate(columns):
+        sns.scatterplot(data=df, x='time', y=col, ax=axs[i])
+        axs[i].set_title(f'Scatter plot: time vs {col}')
+        axs[i].set_xlabel('Time (ms)')
+        axs[i].set_ylabel(col)
+    plt.tight_layout()
+    plt.show()
+
+# No mappable was found to use for colorbar creation. First define a mappable such as an image (with imshow) or a contour set (with contourf).
+
+def hexbin_plot_columns(df, columns, cols_per_row=3, dpi=120):
+    n = len(columns)
+    rows = math.ceil(n / cols_per_row)
+
+    # Ajustamos el tamaño dinámicamente:
+    # 6 pulgadas de ancho por columna y 5 de alto por fila suele ser un buen balance.
+    width = cols_per_row * 6
+    height = rows * 5
+
+    # Creamos la figura. El DPI alto hace que se vea nítido en pantallas grandes.
+    fig, axs = plt.subplots(rows, cols_per_row,
+                            figsize=(width, height),
+                            dpi=dpi,
+                            constrained_layout=True) # constrained_layout es mejor que tight_layout
+
+    # Aplanamos los ejes para iterar fácilmente, incluso si es una sola fila o columna
+    if n > 1:
+        axs_flat = axs.flatten()
+    else:
+        axs_flat = [axs]
+
+    for i, col in enumerate(columns):
+        ax = axs_flat[i]
+
+        # Filtro de outlier (95%)
+        df_clipped_heat = df[df[col] <= df[col].quantile(0.95)]
+
+        hb = ax.hexbin(df_clipped_heat['time'],
+                       df_clipped_heat[col],
+                       gridsize=50,
+                       cmap='inferno',
+                       mincnt=1) # mincnt=1 evita pintar el fondo donde no hay datos
+
+        ax.set_title(f'Time vs {col}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Time (ms)')
+        ax.set_ylabel(col)
+
+        # Añadimos la barra de color de forma compacta
+        fig.colorbar(hb, ax=ax, label='Count', shrink=0.8)
+
+    # Ocultar ejes sobrantes si n no es múltiplo de cols_per_row
+    for j in range(i + 1, len(axs_flat)):
+        axs_flat[j].axis('off')
+
+    plt.show()
+if flag_scatterplots:
+    # scatter_plot_columns(df_clipped, colums_to_scatterplot)
+    ## all hexbin in same plot
+    hexbin_plot_columns(df_clipped, colums_to_scatterplot)

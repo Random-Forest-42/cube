@@ -3,13 +3,15 @@ from PIL import Image
 
 
 file_match_str = 'practice_vs_time'
+file_match_str = ''
 
 
 # --- Configuration ---
 # Set this to the folder path where your images are located
 TARGET_FOLDER = "D:\\Documentos\\Coding\\Python\\cube\\wca_statistics\\results\\"
+TARGET_FOLDER = "D:\\Imagenes\\Pets\\yuki a day\\ordenado\\"
 # Set the frame delay in milliseconds (e.g., 200ms = 0.2 seconds per frame)
-FRAME_DURATION = 200
+FRAME_DURATION = 600
 # Name of the output file
 OUTPUT_GIF_NAME = f"{TARGET_FOLDER}\\gif_{file_match_str}.gif"
 
@@ -23,7 +25,7 @@ OUTPUT_GIF_NAME = f"{TARGET_FOLDER}\\gif_{file_match_str}.gif"
 
 folder_path = TARGET_FOLDER
 output_filename = OUTPUT_GIF_NAME
-duration = 200
+duration = FRAME_DURATION
 
 def create_gif_from_images(folder_path, output_filename="animated_output.gif", duration=200):
     """
